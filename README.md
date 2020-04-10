@@ -1,3 +1,6 @@
+# Da fork
+This fork adds a small change that allows you to login with just your academic email.  To do so just pass the --email argument
+
 # SafariBooks
 Download and generate *EPUB* of your favorite books from [*Safari Books Online*](https://www.safaribooksonline.com) library.  
 I'm not responsible for the use of this program, this is only for *personal* and *educational* purpose.  
