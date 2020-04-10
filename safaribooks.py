@@ -155,7 +155,7 @@ class Display:
     def parse_description(self, desc):
         if not desc:
             return "n/d"
-        
+
         try:
             return html.fromstring(desc).text_content()
 
@@ -316,18 +316,24 @@ class SafariBooks:
 
         self.jwt = {}
 
-        if not args.cred:
-            if not os.path.isfile(COOKIES_FILE):
-                self.display.exit("Login: unable to find cookies file.\n"
-                                  "    Please use the `--cred` or `--login` options to perform the login.")
-
-            self.session.cookies.update(json.load(open(COOKIES_FILE)))
-
-        else:
+        if args.email:
             self.display.info("Logging into Safari Books Online...", state=True)
-            self.do_login(*args.cred)
+            self.do_email_only_login(args.email)
             if not args.no_cookies:
                 json.dump(self.session.cookies.get_dict(), open(COOKIES_FILE, 'w'))
+        else:
+            if not args.cred:
+                if not os.path.isfile(COOKIES_FILE):
+                    self.display.exit("Login: unable to find cookies file.\n"
+                                    "    Please use the `--cred` or `--login` options to perform the login.")
+
+                self.session.cookies.update(json.load(open(COOKIES_FILE)))
+
+            else:
+                self.display.info("Logging into Safari Books Online...", state=True)
+                self.do_login(*args.cred)
+                if not args.no_cookies:
+                    json.dump(self.session.cookies.get_dict(), open(COOKIES_FILE, 'w'))
 
         self.check_login()
 
@@ -453,6 +459,22 @@ class SafariBooks:
         new_cred[1] = cred[sep + 1:]
         return new_cred
 
+    def do_email_only_login(self, email):
+        response = self.requests_provider(
+            'https://learning.oreilly.com/api/v1/user/pq-student/',
+            is_post=True,
+            json={
+                "email": email,
+                "timestamp": "",
+                "signature": "",
+                "ar": True
+            },
+            perform_redirect=False
+        )
+
+        if response == 0:
+            self.display.exit("Login: unable to perform auth to Safari Books Online.\n    Try again...")
+
     def do_login(self, email, password):
         response = self.requests_provider(self.LOGIN_ENTRY_URL)
         if response == 0:
@@ -529,7 +551,7 @@ class SafariBooks:
 
         if "last_chapter_read" in response:
             del response["last_chapter_read"]
-            
+
         for key, value in response.items():
             if value is None:
                 response[key] = 'n/a'
@@ -963,8 +985,8 @@ class SafariBooks:
             r += "<navPoint id=\"{0}\" playOrder=\"{1}\">" \
                  "<navLabel><text>{2}</text></navLabel>" \
                  "<content src=\"{3}\"/>".format(
-                    cc["fragment"] if len(cc["fragment"]) else cc["id"], c,
-                    escape(cc["label"]), cc["href"].replace(".html", ".xhtml").split("/")[-1]
+                     cc["fragment"] if len(cc["fragment"]) else cc["id"], c,
+                     escape(cc["label"]), cc["href"].replace(".html", ".xhtml").split("/")[-1]
                  )
 
             if cc["children"]:
@@ -1040,6 +1062,11 @@ if __name__ == "__main__":
         "--cred", metavar="<EMAIL:PASS>", default=False,
         help="Credentials used to perform the auth login on Safari Books Online."
              " Es. ` --cred \"account_mail@mail.com:password01\" `."
+    )
+    login_arg_group.add_argument(
+        "--email", metavar="<EMAIL>", default=False,
+        help="Tested with umich credentials"
+             " Es. ` --cred \"account_mail@mail.com\" `."
     )
     login_arg_group.add_argument(
         "--login", action='store_true',
